@@ -2,100 +2,537 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="My One-Page Website featuring a gallery with lightbox, video, and contact form.">
     <title>My One-Page Website</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: sans-serif; line-height: 1.6; padding: 20px; }
-        nav { position: sticky; top: 0; background: white; padding: 10px 0; border-bottom: 1px solid #ddd; z-index: 1000; }
-        
+        /* ── Base ──────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #0d0d1a;
+            --surface:  #16162a;
+            --border:   rgba(255,255,255,.08);
+            --accent:   #818cf8;
+            --green:    #34d399;
+            --text:     #e2e8f0;
+            --muted:    #94a3b8;
+            --radius:   .75rem;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
+
+        /* ── Sticky nav ─────────────────────────────── */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(13,13,26,.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        nav a {
+            color: var(--muted);
+            font-size: .9rem;
+            font-weight: 500;
+            transition: color .2s;
+        }
+        nav a:hover { color: var(--text); text-decoration: none; }
+
+        /* ── Sections wrapper ───────────────────────── */
+        section, header, footer {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+
+        /* ── Hero / Home ────────────────────────────── */
+        header#home {
+            text-align: center;
+            padding-top: 5rem;
+        }
+        header#home h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+        header#home p { color: var(--muted); font-size: 1.05rem; max-width: 600px; margin: 0 auto; }
+
+        /* ── Section headings ───────────────────────── */
+        section h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: .5rem;
+        }
+        section > p { color: var(--muted); margin-bottom: 1.5rem; }
+
+        /* ── Gallery grid ───────────────────────────── */
         .gallery-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
         }
+
+        /* Each thumbnail is wrapped in a button for accessibility */
+        .gallery-container button.thumb-btn {
+            all: unset;
+            cursor: pointer;
+            display: block;
+            border-radius: var(--radius);
+            overflow: hidden;
+            position: relative;
+        }
+        .gallery-container button.thumb-btn::after {
+            content: "🔍";
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: rgba(0,0,0,.4);
+            opacity: 0;
+            transition: opacity .25s;
+        }
+        .gallery-container button.thumb-btn:hover::after { opacity: 1; }
+
         .gallery-container img {
             width: 100%;
             height: 200px;
-            object-fit: cover; 
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
+            object-fit: cover;
+            display: block;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 20px rgba(0,0,0,.4);
+            transition: transform .35s ease, box-shadow .35s ease;
         }
-        .gallery-container img:hover {
-            transform: scale(1.05);
+        .gallery-container button.thumb-btn:hover img {
+            transform: scale(1.06);
+            box-shadow: 0 8px 30px rgba(129,140,248,.3);
+        }
+
+        /* ── LIGHTBOX MODAL ─────────────────────────── */
+        #lightbox {
+            display: none;          /* hidden by default; JS sets display:flex to open */
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,.92);
+            backdrop-filter: blur(6px);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 1rem;
+            animation: lbFadeIn .2s ease;
+        }
+        @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        #lightbox.open { display: flex; }
+
+        /* Full-size image inside lightbox */
+        #lb-img {
+            max-width: min(90vw, 900px);
+            max-height: 75vh;
+            object-fit: contain;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 60px rgba(0,0,0,.7);
+            animation: lbZoomIn .25s ease;
+        }
+        @keyframes lbZoomIn { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Caption */
+        #lb-caption {
+            color: var(--muted);
+            font-size: .9rem;
+            margin-top: .8rem;
+            text-align: center;
+        }
+
+        /* Counter (e.g. "3 / 9") */
+        #lb-counter {
+            color: var(--muted);
+            font-size: .78rem;
+            margin-top: .3rem;
+            letter-spacing: .05em;
+        }
+
+        /* Close button – top-right corner */
+        #lb-close {
+            position: fixed;
+            top: 1rem;
+            right: 1.2rem;
+            background: rgba(255,255,255,.1);
+            border: 1px solid rgba(255,255,255,.15);
+            color: #fff;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            font-size: 1.3rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s;
+        }
+        #lb-close:hover { background: rgba(255,255,255,.22); }
+
+        /* Prev / Next arrow buttons */
+        .lb-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,.1);
+            border: 1px solid rgba(255,255,255,.15);
+            color: #fff;
+            border-radius: .5rem;
+            width: 48px;
+            height: 48px;
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s, transform .15s;
+        }
+        .lb-arrow:hover { background: rgba(255,255,255,.22); }
+        .lb-arrow:active { transform: translateY(-50%) scale(.93); }
+        #lb-prev { left: .8rem; }
+        #lb-next { right: .8rem; }
+
+        /* ── Video section ──────────────────────────── */
+        .video-wrap {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,.5);
+        }
+        .video-wrap iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+        }
+
+        /* ── Contact form ───────────────────────────── */
+        form { display: flex; flex-direction: column; gap: 1rem; max-width: 500px; }
+
+        label { font-size: .85rem; color: var(--muted); font-weight: 500; }
+
+        input[type="text"],
+        input[type="email"],
+        textarea {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: .5rem;
+            color: var(--text);
+            padding: .6rem .9rem;
+            font-size: .95rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color .2s;
+            resize: vertical;
+        }
+        input:focus, textarea:focus { border-color: var(--accent); }
+
+        input[type="submit"] {
+            align-self: flex-start;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            border: none;
+            border-radius: .5rem;
+            color: #fff;
+            padding: .6rem 1.6rem;
+            font-size: .95rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        input[type="submit"]:hover { opacity: .85; }
+
+        /* ── Footer ─────────────────────────────────── */
+        footer {
+            text-align: center;
+            padding: 2rem 1.5rem 3rem;
+            color: var(--muted);
+            font-size: .85rem;
         }
     </style>
 </head>
 <body>
 
+    <!-- ── Sticky Navigation ── -->
     <nav>
-        <a href="#home">Home</a> | 
-        <a href="#gallery">Gallery</a> | 
-        <a href="#video">Video</a> | 
+        <a href="#home">Home</a>
+        <a href="#gallery">Gallery</a>
+        <a href="#video">Video</a>
         <a href="#contact">Contact</a>
     </nav>
 
+    <!-- ── Hero / Home Section ── -->
     <header id="home">
         <h1>Welcome to the Journey</h1>
         <p>This is the start of my one-page website. I have planned this layout to be functional and easy to navigate using internal links.</p>
         <hr>
     </header>
 
+    <!-- ── Gallery Section ── -->
     <section id="gallery">
         <h2>Our Gallery</h2>
-        <p>A look at some of our favorite highlights:</p>
-        
+        <p>Click any image to open the full-size lightbox viewer.</p>
+
         <div class="gallery-container">
-            <img src="Thumb/thumbnail_1.jpeg.jpg" alt="Highlight 1">
-            <img src="Thumb/thumbnail_2.jpg" alt="Highlight 2">
-            <img src="Thumb/thumbnail_3.jpg" alt="Highlight 3">
-            <img src="Thumb/thumbnail_4.jpg" alt="Highlight 4">
-            <img src="Thumb/thumbnail_5.jpg" alt="Highlight 5">
-            <img src="Thumb/thumbnail_6.jpg" alt="Highlight 6">
-            <img src="Thumb/thumbnail_7.jpg" alt="Highlight 7">
-            <img src="Thumb/thumbnail_8.jpg" alt="Highlight 8">
-            <img src="Thumb/thumbnail_9.jpg" alt="Highlight 9">
+            <!--
+                Each image is wrapped in a <button> with onclick="openLightbox(index)".
+                This is the HTML element that calls and displays the lightbox function.
+                data-caption holds the text shown beneath the full-size image.
+            -->
+            <button class="thumb-btn" onclick="openLightbox(0)" id="thumb-0">
+                <img src="Thumb/thumbnail_1.jpeg.jpg" alt="Highlight 1">
+            </button>
+            <button class="thumb-btn" onclick="openLightbox(1)" id="thumb-1">
+                <img src="Thumb/thumbnail_2.jpg" alt="Highlight 2">
+            </button>
+            <button class="thumb-btn" onclick="openLightbox(2)" id="thumb-2">
+                <img src="Thumb/thumbnail_3.jpg" alt="Highlight 3">
+            </button>
+            <button class="thumb-btn" onclick="openLightbox(3)" id="thumb-3">
+                <img src="Thumb/thumbnail_4.jpg" alt="Highlight 4">
+            </button>
+            <button class="thumb-btn" onclick="openLightbox(4)" id="thumb-4">
+                <img src="Thumb/thumbnail_5.jpg" alt="Highlight 5">
+            </button>
+            <button class="thumb-btn" onclick="openLightbox(5)" id="thumb-5">
+                <img src="Thumb/thumbnail_6.jpg" alt="Highlight 6">
+            </button>
+            <button class="thumb-btn" onclick="openLightbox(6)" id="thumb-6">
+                <img src="Thumb/thumbnail_7.jpg" alt="Highlight 7">
+            </button>
+            <button class="thumb-btn" onclick="openLightbox(7)" id="thumb-7">
+                <img src="Thumb/thumbnail_8.jpg" alt="Highlight 8">
+            </button>
+            <button class="thumb-btn" onclick="openLightbox(8)" id="thumb-8">
+                <img src="Thumb/thumbnail_9.jpg" alt="Highlight 9">
+            </button>
         </div>
         <hr>
     </section>
 
-   <section id="video">
+    <!-- ── LIGHTBOX MODAL ──────────────────────────────────────
+         This modal is hidden by default (display:none in CSS).
+         JavaScript adds the "open" class to show it.
+    ─────────────────────────────────────────────────────────── -->
+    <div id="lightbox" role="dialog" aria-modal="true" aria-label="Image lightbox">
+
+        <!-- Close button — calls closeLightbox() -->
+        <button id="lb-close" onclick="closeLightbox()" title="Close (Esc)">✕</button>
+
+        <!-- Previous image arrow — calls navigate(-1) -->
+        <button id="lb-prev" class="lb-arrow" onclick="navigate(-1)" title="Previous (←)">&#8592;</button>
+
+        <!-- The enlarged image — src is swapped by JavaScript -->
+        <img id="lb-img" src="" alt="Enlarged gallery image">
+
+        <!-- Caption text below the image -->
+        <p id="lb-caption"></p>
+
+        <!-- Counter showing current position e.g. "2 / 9" -->
+        <p id="lb-counter"></p>
+
+        <!-- Next image arrow — calls navigate(+1) -->
+        <button id="lb-next" class="lb-arrow" onclick="navigate(1)"  title="Next (→)">&#8594;</button>
+
+    </div>
+
+    <!-- ── Video Section ── -->
+    <section id="video">
         <h2>Featured Video</h2>
         <p>Watch this short video to learn more about our topic.</p>
-        <iframe 
-            width="700" 
-            height="394" 
-            src="https://www.youtube.com/embed/dQw4w9WgXcQ?list=RDdQw4w9WgXcQ" 
-            title="Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)" 
-            frameborder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-            referrerpolicy="strict-origin-when-cross-origin" 
-            allowfullscreen>
-        </iframe>
+        <div class="video-wrap">
+            <iframe
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ?list=RDdQw4w9WgXcQ"
+                title="Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen>
+            </iframe>
+        </div>
         <hr>
     </section>
 
+    <!-- ── Contact Section ── -->
     <section id="contact">
         <h2>Get in Touch</h2>
         <p>Please fill out the form below to contact us.</p>
         <form action="" method="get">
-            <label for="fname">First Name:</label><br>
-            <input type="text" id="fname" name="fname" required><br><br>
+            <label for="fname">First Name:</label>
+            <input type="text" id="fname" name="fname" placeholder="Your first name" required>
 
-            <label for="email">Email Address:</label><br>
-            <input type="email" id="email" name="email" required><br><br>
+            <label for="email">Email Address:</label>
+            <input type="email" id="email" name="email" placeholder="you@example.com" required>
 
-            <label for="message">Message:</label><br>
-            <textarea id="message" name="message" rows="4" cols="30"></textarea><br><br>
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" rows="5" placeholder="Write your message here…"></textarea>
 
-            <input type="submit" value="Submit">
+            <input type="submit" value="Send Message">
         </form>
     </section>
 
+    <!-- ── Footer ── -->
     <footer>
         <hr>
         <p>&copy; 2026 My One-Page Web Project. All rights reserved.</p>
     </footer>
 
+    <!-- ══════════════════════════════════════════════════════
+         LIGHTBOX JAVASCRIPT
+         All lightbox logic lives here so no external file
+         is needed. Comments explain every step.
+    ══════════════════════════════════════════════════════ -->
+    <script>
+        // ── Build the images array from the gallery thumbnails ──
+        //
+        // querySelectorAll returns every thumbnail <img> inside the gallery.
+        // We convert it to a plain array so we can use array methods on it.
+        var thumbImgs   = Array.from(document.querySelectorAll(".gallery-container img"));
+
+        // currentIndex tracks which image is currently shown in the lightbox.
+        var currentIndex = 0;
+
+        // ── Grab the lightbox DOM elements once, reuse them throughout ──
+        var lightbox  = document.getElementById("lightbox");
+        var lbImg     = document.getElementById("lb-img");
+        var lbCaption = document.getElementById("lb-caption");
+        var lbCounter = document.getElementById("lb-counter");
+
+        /**
+         * openLightbox(index)
+         * -------------------
+         * Opens the modal and displays the image at the given index.
+         * Called by each thumbnail button's onclick attribute.
+         *
+         * @param {number} index – position of the clicked image in the array
+         */
+        function openLightbox(index) {
+            // Store which image is now active
+            currentIndex = index;
+
+            // Show the modal by adding the "open" class (CSS: display:flex)
+            lightbox.classList.add("open");
+
+            // Prevent the page behind from scrolling while lightbox is open
+            document.body.style.overflow = "hidden";
+
+            // Load the correct image and caption
+            loadImage(currentIndex);
+        }
+
+        /**
+         * closeLightbox()
+         * ---------------
+         * Hides the lightbox modal and restores page scrolling.
+         * Called by the ✕ close button and the Escape key handler.
+         */
+        function closeLightbox() {
+            // Remove "open" class — CSS hides the modal (display:none)
+            lightbox.classList.remove("open");
+
+            // Restore normal page scroll
+            document.body.style.overflow = "";
+
+            // Clear the src so the browser stops loading the image
+            lbImg.src = "";
+        }
+
+        /**
+         * navigate(direction)
+         * -------------------
+         * Moves to the previous (-1) or next (+1) image.
+         * Wraps around at both ends of the array.
+         *
+         * @param {number} direction – -1 for previous, +1 for next
+         */
+        function navigate(direction) {
+            // Update the index and wrap around using the modulus operator
+            currentIndex = (currentIndex + direction + thumbImgs.length) % thumbImgs.length;
+
+            // Load the image at the new index
+            loadImage(currentIndex);
+        }
+
+        /**
+         * loadImage(index)
+         * ----------------
+         * Swaps the lightbox <img> src and updates the caption + counter.
+         * This is the core function that drives the image gallery display.
+         *
+         * @param {number} index – which image in the array to display
+         */
+        function loadImage(index) {
+            var img = thumbImgs[index];
+
+            // Set the lightbox image source to the selected thumbnail's src
+            lbImg.src = img.src;
+            lbImg.alt = img.alt;
+
+            // Update the caption with the image's alt text
+            lbCaption.textContent = img.alt;
+
+            // Update the counter display (e.g. "3 / 9")
+            // Uses the + operator to build the string expression
+            lbCounter.textContent = (index + 1) + " / " + thumbImgs.length;
+        }
+
+        // ── Keyboard navigation ──────────────────────────────
+        //
+        // An event listener on the document listens for keydown events
+        // so the user can navigate the lightbox without a mouse.
+        document.addEventListener("keydown", function(event) {
+            // Only respond to keys when the lightbox is actually open
+            if (!lightbox.classList.contains("open")) return;
+
+            if (event.key === "ArrowLeft")  navigate(-1);   // previous image
+            if (event.key === "ArrowRight") navigate(1);    // next image
+            if (event.key === "Escape")     closeLightbox(); // close modal
+        });
+
+        // ── Click the backdrop to close ──────────────────────
+        //
+        // If the user clicks the dark overlay (not the image or buttons),
+        // the lightbox closes. We check that the click target IS the
+        // lightbox div itself, not a child element.
+        lightbox.addEventListener("click", function(event) {
+            if (event.target === lightbox) {
+                closeLightbox();
+            }
+        });
+    </script>
+
 </body>
-</html>
+</html>
